@@ -1,63 +1,89 @@
 :root {
-    --primary-color: #FF6B6B;
-    --secondary-color: #4ECDC4;
-    --background-color: #FFF9F4;
-    --text-color: #2D3436;
-    --error-color: #FF7675;
+    --primary-color: #4A90E2;    /* Soft blue */
+    --secondary-color: #67B279;  /* Soft green */
+    --background-color: #F5F7FA; /* Light gray-blue */
+    --text-color: #2C3E50;      /* Dark blue-gray */
+    --error-color: #E74C3C;     /* Soft red for errors */
+    --border-color: #E1E8ED;    /* Light gray for borders */
+    --hover-color: #357ABD;     /* Darker blue for hover states */
+}
+
+/* Reset and Base Styles */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
 }
 
 body {
-    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
     font-weight: 300;
-    margin: 0;
-    padding: 0;
+    line-height: 1.6;
     background-color: var(--background-color);
     color: var(--text-color);
 }
 
+/* Navigation */
 nav {
-    background-color: var(--primary-color);
-    padding: 1rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background-color: white;
+    padding: 1rem 2rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
 }
 
 nav a {
-    color: white;
+    color: var(--text-color);
     text-decoration: none;
-    margin-right: 1rem;
-    font-weight: 300;
+    margin-right: 1.5rem;
+    font-weight: 400;
+    font-size: 0.95rem;
+    transition: color 0.2s ease;
 }
 
 nav a:hover {
-    text-decoration: underline;
+    color: var(--primary-color);
+    text-decoration: none;
 }
 
+/* Authentication Container */
 .auth-container {
     max-width: 400px;
-    margin: 2rem auto;
-    padding: 2rem;
+    margin: 3rem auto;
+    padding: 2.5rem;
     background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 }
 
+/* Form Elements */
 .form-group {
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
 }
 
 label {
     display: block;
     margin-bottom: 0.5rem;
     color: var(--text-color);
+    font-weight: 500;
+    font-size: 0.9rem;
 }
 
 input {
     width: 100%;
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 1rem;
-    font-weight: 300;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 400;
+    transition: border-color 0.2s ease;
+}
+
+input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.1);
 }
 
 button {
@@ -65,37 +91,62 @@ button {
     color: white;
     border: none;
     padding: 0.75rem 1.5rem;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
-    font-weight: 300;
+    font-weight: 500;
     width: 100%;
+    transition: background-color 0.2s ease;
 }
 
 button:hover {
-    opacity: 0.9;
+    background-color: var(--hover-color);
 }
 
+/* Messages */
 .flash-message {
     background-color: var(--error-color);
     color: white;
     padding: 1rem;
-    margin: 1rem 0;
-    border-radius: 4px;
+    margin: 1rem auto;
+    border-radius: 6px;
     text-align: center;
+    max-width: 400px;
+    font-size: 0.9rem;
 }
 
+/* Links */
 a {
     color: var(--primary-color);
     text-decoration: none;
+    transition: color 0.2s ease;
 }
 
 a:hover {
-    text-decoration: underline;
+    color: var(--hover-color);
 }
 
+/* Typography */
 h2 {
     color: var(--text-color);
-    font-weight: 300;
+    font-weight: 500;
     text-align: center;
     margin-bottom: 2rem;
+    font-size: 1.5rem;
+}
+
+/* Helper Classes */
+.text-center {
+    text-align: center;
+}
+
+.mt-3 {
+    margin-top: 1.5rem;
+}
+
+/* Form Footer */
+.form-footer {
+    margin-top: 1.5rem;
+    text-align: center;
+    font-size: 0.9rem;
+    color: #666;
 } 

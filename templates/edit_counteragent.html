@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="content-container">
+    <div class="auth-container">
+        <h2>Edit Counteragent</h2>
+        <form method="POST">
+            <div class="form-group">
+                <label for="name">Name</label>
+                <input type="text" name="name" id="name" value="{{ counteragent.name }}" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="description">Description</label>
+                <textarea name="description" id="description" class="form-textarea" placeholder="Optional">{{ counteragent.description or '' }}</textarea>
+            </div>
+            
+            <button type="submit">Update Counteragent</button>
+        </form>
+        
+        <div class="form-footer">
+            <a href="{{ url_for('counteragents') }}">Back to Counteragents</a>
+        </div>
+    </div>
+</div>
+{% endblock %} 

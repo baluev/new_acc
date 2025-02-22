@@ -4,12 +4,28 @@
 <div class="content-container">
     <div class="auth-container">
         <h2>Edit Transaction</h2>
-        <form method="POST">
+        
+        <div class="tabs">
+            <button type="button" class="tab {% if transaction.amount >= 0 %}active{% endif %}" data-tab="income">Income</button>
+            <button type="button" class="tab {% if transaction.amount < 0 %}active{% endif %}" data-tab="expense">Expense</button>
+        </div>
+
+        <form method="POST" id="transactionForm">
+            <input type="hidden" name="transaction_type" id="transactionType" value="{{ 'income' if transaction.amount >= 0 else 'expense' }}">
+            
             <div class="form-group">
                 <label for="account">Account</label>
                 <select name="account_id" id="account" class="form-select" required>
-                    {% for account in accounts %}
-                    <option value="{{ account.id }}" {% if account.id == transaction.account_id %}selected{% endif %}>
+                    <option value="">Select an account</option>
+                    {# Income accounts - shown when income tab is active #}
+                    {% for account in income_accounts %}
+                    <option value="{{ account.id }}" data-type="income" {% if account.id == transaction.account_id %}selected{% endif %} {% if transaction.amount < 0 %}style="display: none;"{% endif %}>
+                        {{ account.name }}
+                    </option>
+                    {% endfor %}
+                    {# Expense accounts - shown when expense tab is active #}
+                    {% for account in expense_accounts %}
+                    <option value="{{ account.id }}" data-type="expense" {% if account.id == transaction.account_id %}selected{% endif %} {% if transaction.amount >= 0 %}style="display: none;"{% endif %}>
                         {{ account.name }}
                     </option>
                     {% endfor %}
@@ -17,18 +33,25 @@
             </div>
             
             <div class="form-group">
-                <label for="amount">Amount (positive for income, negative for expenses)</label>
-                <input type="number" step="0.01" name="amount" id="amount" value="{{ transaction.amount }}" required>
+                <label for="amount">Amount ({{ 'income' if transaction.amount >= 0 else 'expense' }})</label>
+                <input type="number" step="0.01" min="0" name="amount" id="amount" value="{{ abs(transaction.amount) }}" required>
             </div>
             
             <div class="form-group">
-                <label for="counteragent">Counteragent (optional)</label>
-                <input type="text" name="counteragent" id="counteragent" value="{{ transaction.counteragent or '' }}">
+                <label for="counteragent_id">Counteragent</label>
+                <select name="counteragent_id" id="counteragent_id" class="form-select">
+                    <option value="">Select a counteragent (optional)</option>
+                    {% for counteragent in counteragents %}
+                    <option value="{{ counteragent.id }}" {% if counteragent.id == transaction.counteragent_id %}selected{% endif %}>
+                        {{ counteragent.name }}
+                    </option>
+                    {% endfor %}
+                </select>
             </div>
             
             <div class="form-group">
-                <label for="comment">Comment (optional)</label>
-                <textarea name="comment" id="comment" class="form-textarea">{{ transaction.comment or '' }}</textarea>
+                <label for="comment">Comment</label>
+                <textarea name="comment" id="comment" class="form-textarea" placeholder="Optional">{{ transaction.comment or '' }}</textarea>
             </div>
             
             <button type="submit">Update Transaction</button>
@@ -39,4 +62,71 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tabs = document.querySelectorAll('.tab');
+    const transactionType = document.getElementById('transactionType');
+    const amountInput = document.getElementById('amount');
+    const form = document.getElementById('transactionForm');
+    const accountSelect = document.getElementById('account');
+    const accountOptions = accountSelect.querySelectorAll('option');
+
+    function updateAccountOptions(type) {
+        // Reset selection if the current selection is not of the correct type
+        const currentOption = accountSelect.selectedOptions[0];
+        if (currentOption && currentOption.value !== '' && currentOption.dataset.type !== type) {
+            accountSelect.value = '';
+        }
+        
+        // Show/hide options based on type
+        accountOptions.forEach(option => {
+            if (option.value === '') {
+                option.style.display = ''; // Always show the placeholder
+            } else {
+                option.style.display = option.dataset.type === type ? '' : 'none';
+            }
+        });
+    }
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Update active tab
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            const type = tab.dataset.tab;
+            
+            // Update hidden input
+            transactionType.value = type;
+            
+            // Update amount label
+            const label = amountInput.previousElementSibling;
+            label.textContent = `Amount (${type === 'income' ? 'income' : 'expense'})`;
+            
+            // Update account options
+            updateAccountOptions(type);
+        });
+    });
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const amount = parseFloat(amountInput.value);
+        if (amount < 0) {
+            alert('Please enter a positive number');
+            return;
+        }
+        
+        // Convert to negative if it's an expense
+        if (transactionType.value === 'expense') {
+            amountInput.value = -amount;
+        }
+        
+        form.submit();
+    });
+
+    // Initialize account options based on current transaction type
+    updateAccountOptions(transactionType.value);
+});
+</script>
 {% endblock %} 

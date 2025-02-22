@@ -10,15 +10,19 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
+    {% if current_user.is_authenticated %}
     <nav>
-        {% if current_user.is_authenticated %}
-        <a href="{{ url_for('index') }}">Home</a>
+        <a href="{{ url_for('index') }}">Transactions</a>
+        <a href="{{ url_for('accounts') }}">Accounts</a>
+        <a href="{{ url_for('counteragents') }}">Counteragents</a>
         <a href="{{ url_for('logout') }}">Logout</a>
-        {% else %}
+    </nav>
+    {% else %}
+    <nav>
         <a href="{{ url_for('login') }}">Login</a>
         <a href="{{ url_for('register') }}">Register</a>
-        {% endif %}
     </nav>
+    {% endif %}
     
     {% with messages = get_flashed_messages() %}
         {% if messages %}

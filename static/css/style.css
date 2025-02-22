@@ -257,6 +257,19 @@ td {
     color: var(--text-color);
 }
 
+tr.clickable {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+tr.clickable:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+tr.clickable td:last-child {
+    cursor: default;
+}
+
 tr:last-child td {
     border-bottom: none;
 }

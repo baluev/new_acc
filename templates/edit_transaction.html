@@ -33,8 +33,8 @@
             </div>
             
             <div class="form-group">
-                <label for="amount">Amount ({{ 'income' if transaction.amount >= 0 else 'expense' }})</label>
-                <input type="number" step="0.01" min="0" name="amount" id="amount" value="{{ abs(transaction.amount) }}" required>
+                <label for="amount">Amount</label>
+                <input type="number" step="0.01" min="0" name="amount" id="amount" value="{{ transaction.amount|abs }}" required>
             </div>
             
             <div class="form-group">
@@ -99,10 +99,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Update hidden input
             transactionType.value = type;
-            
-            // Update amount label
-            const label = amountInput.previousElementSibling;
-            label.textContent = `Amount (${type === 'income' ? 'income' : 'expense'})`;
             
             // Update account options
             updateAccountOptions(type);

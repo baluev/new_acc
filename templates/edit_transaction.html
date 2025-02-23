@@ -1,5 +1,11 @@
 {% extends "base.html" %}
 
+{% block head %}
+{# Add Choices.js library #}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@9.0.1/public/assets/styles/choices.min.css">
+<script src="https://cdn.jsdelivr.net/npm/choices.js@9.0.1/public/assets/scripts/choices.min.js"></script>
+{% endblock %}
+
 {% block content %}
 <div class="content-container">
     <div class="auth-container">
@@ -16,16 +22,16 @@
             <div class="form-group">
                 <label for="account">Account</label>
                 <select name="account_id" id="account" class="form-select" required>
-                    <option value="">Select an account</option>
-                    {# Income accounts - shown when income tab is active #}
+                    <option value="">Search or select an account</option>
+                    {# Income accounts #}
                     {% for account in income_accounts %}
-                    <option value="{{ account.id }}" data-type="income" {% if account.id == transaction.account_id %}selected{% endif %} {% if transaction.amount < 0 %}style="display: none;"{% endif %}>
+                    <option value="{{ account.id }}" data-type="income" {% if account.id == transaction.account_id %}selected{% endif %}>
                         {{ account.name }}
                     </option>
                     {% endfor %}
-                    {# Expense accounts - shown when expense tab is active #}
+                    {# Expense accounts #}
                     {% for account in expense_accounts %}
-                    <option value="{{ account.id }}" data-type="expense" {% if account.id == transaction.account_id %}selected{% endif %} {% if transaction.amount >= 0 %}style="display: none;"{% endif %}>
+                    <option value="{{ account.id }}" data-type="expense" {% if account.id == transaction.account_id %}selected{% endif %}>
                         {{ account.name }}
                     </option>
                     {% endfor %}
@@ -40,7 +46,7 @@
             <div class="form-group">
                 <label for="counteragent_id">Counteragent</label>
                 <select name="counteragent_id" id="counteragent_id" class="form-select">
-                    <option value="">Select a counteragent (optional)</option>
+                    <option value="">Search or select a counteragent</option>
                     {% for counteragent in counteragents %}
                     <option value="{{ counteragent.id }}" {% if counteragent.id == transaction.counteragent_id %}selected{% endif %}>
                         {{ counteragent.name }}
@@ -70,37 +76,104 @@ document.addEventListener('DOMContentLoaded', function() {
     const amountInput = document.getElementById('amount');
     const form = document.getElementById('transactionForm');
     const accountSelect = document.getElementById('account');
-    const accountOptions = accountSelect.querySelectorAll('option');
+    
+    // Initialize Choices.js for account dropdown
+    const accountChoices = new Choices(accountSelect, {
+        searchEnabled: true,
+        searchPlaceholderValue: 'Search for an account...',
+        placeholder: true,
+        placeholderValue: 'Search or select an account',
+        itemSelectText: '',
+        classNames: {
+            containerOuter: 'choices account-choices'
+        },
+        choices: Array.from(accountSelect.options).map(option => ({
+            value: option.value,
+            label: option.text,
+            selected: option.selected,
+            customProperties: {
+                type: option.dataset.type
+            }
+        })),
+        shouldFocusInput: true
+    });
+    
+    // Initialize Choices.js for counteragent dropdown
+    const counteragentChoices = new Choices('#counteragent_id', {
+        searchEnabled: true,
+        searchPlaceholderValue: 'Search for a counteragent...',
+        placeholder: true,
+        placeholderValue: 'Search or select a counteragent',
+        itemSelectText: '',
+        classNames: {
+            containerOuter: 'choices counteragent-choices'
+        },
+        shouldFocusInput: true
+    });
+    
+    // Add "Add New" option to dropdowns
+    function addNewOption(choicesInstance, type) {
+        const dropdown = choicesInstance.dropdown.element;
+        if (!dropdown.querySelector('.add-new-option')) {
+            const addNewDiv = document.createElement('div');
+            addNewDiv.className = 'add-new-option';
+            addNewDiv.textContent = `Add New ${type}`;
+            addNewDiv.onclick = () => {
+                window.location.href = type === 'Account' ? 
+                    "{{ url_for('add_account') }}" : 
+                    "{{ url_for('add_counteragent') }}";
+            };
+            dropdown.appendChild(addNewDiv);
+        }
+    }
+    
+    // Add the "Add New" option when dropdowns are opened
+    accountChoices.passedElement.element.addEventListener('showDropdown', () => {
+        addNewOption(accountChoices, 'Account');
+        // Focus search input
+        setTimeout(() => {
+            const searchInput = accountChoices.input.element;
+            if (searchInput) {
+                searchInput.focus();
+            }
+        }, 0);
+    });
+    
+    counteragentChoices.passedElement.element.addEventListener('showDropdown', () => {
+        addNewOption(counteragentChoices, 'Counteragent');
+        // Focus search input
+        setTimeout(() => {
+            const searchInput = counteragentChoices.input.element;
+            if (searchInput) {
+                searchInput.focus();
+            }
+        }, 0);
+    });
 
     function updateAccountOptions(type) {
-        // Reset selection if the current selection is not of the correct type
-        const currentOption = accountSelect.selectedOptions[0];
-        if (currentOption && currentOption.value !== '' && currentOption.dataset.type !== type) {
-            accountSelect.value = '';
-        }
+        // Get all choices except the placeholder
+        const choices = accountChoices.config.choices.filter(choice => choice.value !== '');
         
-        // Show/hide options based on type
-        accountOptions.forEach(option => {
-            if (option.value === '') {
-                option.style.display = ''; // Always show the placeholder
-            } else {
-                option.style.display = option.dataset.type === type ? '' : 'none';
-            }
-        });
+        // Filter choices based on type
+        const filteredChoices = choices.filter(choice => 
+            choice.customProperties && choice.customProperties.type === type
+        );
+        
+        // Update the choices
+        accountChoices.clearStore();
+        accountChoices.setChoices([
+            { value: '', label: 'Search or select an account', placeholder: true },
+            ...filteredChoices
+        ], 'value', 'label', true);
     }
 
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
-            // Update active tab
             tabs.forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
             
             const type = tab.dataset.tab;
-            
-            // Update hidden input
             transactionType.value = type;
-            
-            // Update account options
             updateAccountOptions(type);
         });
     });
@@ -113,7 +186,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Convert to negative if it's an expense
         if (transactionType.value === 'expense') {
             amountInput.value = -amount;
         }

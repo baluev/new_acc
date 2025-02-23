@@ -40,6 +40,17 @@ class Counteragent(db.Model):
     def __repr__(self):
         return f'<Counteragent {self.name}>'
 
+class TransactionGroup(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    group_type = db.Column(db.String(20), nullable=False)  # 'income' или 'expense'
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    transactions = db.relationship('Transaction', backref='group', lazy=True)
+    created_at = db.Column(db.DateTime, nullable=False, server_default=func.now())
+
+    def __repr__(self):
+        return f'<TransactionGroup {self.name} ({self.group_type})>'
+
 class Transaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     datetime = db.Column(db.DateTime, nullable=False, server_default=func.now())
@@ -47,8 +58,20 @@ class Transaction(db.Model):
     amount = db.Column(db.Numeric(10, 2), nullable=False)  # Using Numeric for precise decimal calculations
     counteragent_id = db.Column(db.Integer, db.ForeignKey('counteragent.id'))
     counteragent = db.Column(db.String(200))  # For backward compatibility and optional counteragents
+    group_id = db.Column(db.Integer, db.ForeignKey('transaction_group.id'))
     comment = db.Column(db.Text)
     created_at = db.Column(db.DateTime, nullable=False, server_default=func.now())
 
     def __repr__(self):
-        return f'<Transaction {self.datetime}: {self.amount}>' 
+        return f'<Transaction {self.datetime}: {self.amount}>'
+
+class ApiSettings(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    api_key = db.Column(db.String(500), nullable=False)
+    last_sync_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, server_default=func.now())
+    updated_at = db.Column(db.DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+
+    def __repr__(self):
+        return f'<ApiSettings for user {self.user_id}>' 

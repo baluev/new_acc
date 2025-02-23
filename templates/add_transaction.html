@@ -38,6 +38,21 @@
                 <label for="amount">Amount</label>
                 <input type="number" step="0.01" min="0" name="amount" id="amount" required>
             </div>
+
+            <div class="form-group">
+                <label for="group_id">Group</label>
+                <select name="group_id" id="group_id" class="form-select">
+                    <option value="">Search or select a group</option>
+                    {# Income groups #}
+                    {% for group in income_groups %}
+                    <option value="{{ group.id }}" data-type="income">{{ group.name }}</option>
+                    {% endfor %}
+                    {# Expense groups #}
+                    {% for group in expense_groups %}
+                    <option value="{{ group.id }}" data-type="expense">{{ group.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
             
             <div class="form-group">
                 <label for="counteragent_id">Counteragent</label>
@@ -70,6 +85,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const amountInput = document.getElementById('amount');
     const form = document.getElementById('transactionForm');
     const accountSelect = document.getElementById('account');
+    const groupSelect = document.getElementById('group_id');
     
     // Initialize Choices.js for account dropdown
     const accountChoices = new Choices(accountSelect, {
@@ -104,6 +120,27 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         shouldFocusInput: true
     });
+
+    // Initialize Choices.js for group dropdown
+    const groupChoices = new Choices(groupSelect, {
+        searchEnabled: true,
+        searchPlaceholderValue: 'Search for a group...',
+        placeholder: true,
+        placeholderValue: 'Search or select a group',
+        itemSelectText: '',
+        classNames: {
+            containerOuter: 'choices group-choices'
+        },
+        choices: Array.from(groupSelect.options).map(option => ({
+            value: option.value,
+            label: option.text,
+            selected: option.selected,
+            customProperties: {
+                type: option.dataset.type
+            }
+        })),
+        shouldFocusInput: true
+    });
     
     // Add "Add New" option to dropdowns
     function addNewOption(choicesInstance, type) {
@@ -115,7 +152,9 @@ document.addEventListener('DOMContentLoaded', function() {
             addNewDiv.onclick = () => {
                 window.location.href = type === 'Account' ? 
                     "{{ url_for('add_account') }}" : 
-                    "{{ url_for('add_counteragent') }}";
+                    type === 'Counteragent' ?
+                    "{{ url_for('add_counteragent') }}" :
+                    "{{ url_for('add_transaction_group') }}";
             };
             dropdown.appendChild(addNewDiv);
         }
@@ -144,6 +183,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 0);
     });
 
+    groupChoices.passedElement.element.addEventListener('showDropdown', () => {
+        addNewOption(groupChoices, 'Group');
+        // Focus search input
+        setTimeout(() => {
+            const searchInput = groupChoices.input.element;
+            if (searchInput) {
+                searchInput.focus();
+            }
+        }, 0);
+    });
+
     function updateAccountOptions(type) {
         // Get all choices except the placeholder
         const choices = accountChoices.config.choices.filter(choice => choice.value !== '');
@@ -161,6 +211,23 @@ document.addEventListener('DOMContentLoaded', function() {
         ], 'value', 'label', true);
     }
 
+    function updateGroupOptions(type) {
+        // Get all choices except the placeholder
+        const choices = groupChoices.config.choices.filter(choice => choice.value !== '');
+        
+        // Filter choices based on type
+        const filteredChoices = choices.filter(choice => 
+            choice.customProperties && choice.customProperties.type === type
+        );
+        
+        // Update the choices
+        groupChoices.clearStore();
+        groupChoices.setChoices([
+            { value: '', label: 'Search or select a group', placeholder: true },
+            ...filteredChoices
+        ], 'value', 'label', true);
+    }
+
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
             tabs.forEach(t => t.classList.remove('active'));
@@ -169,6 +236,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const type = tab.dataset.tab;
             transactionType.value = type;
             updateAccountOptions(type);
+            updateGroupOptions(type);
         });
     });
 
@@ -187,8 +255,9 @@ document.addEventListener('DOMContentLoaded', function() {
         form.submit();
     });
 
-    // Initialize account options for income (default tab)
+    // Initialize account and group options for income (default tab)
     updateAccountOptions('income');
+    updateGroupOptions('income');
 });
 </script>
 {% endblock %} 

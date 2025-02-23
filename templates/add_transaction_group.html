@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="content-container">
+    <div class="auth-container">
+        <h2>Add Transaction Group</h2>
+        <form method="POST">
+            <div class="form-group">
+                <label for="name">Group Name</label>
+                <input type="text" name="name" id="name" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="group_type">Group Type</label>
+                <select name="group_type" id="group_type" class="form-select" required>
+                    <option value="expense">Expense Group</option>
+                    <option value="income">Income Group</option>
+                </select>
+            </div>
+            
+            <button type="submit">Add Group</button>
+        </form>
+        
+        <div class="form-footer">
+            <a href="{{ url_for('transaction_groups') }}">Back to Groups</a>
+        </div>
+    </div>
+</div>
+{% endblock %} 

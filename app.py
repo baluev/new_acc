@@ -1,12 +1,13 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_migrate import Migrate
-from models import db, User, Account, Transaction, Counteragent
+from models import db, User, Account, Transaction, Counteragent, TransactionGroup, ApiSettings
 import os
 from datetime import datetime, date, timedelta
 from calendar import month_name
 from sqlalchemy import extract, func
 from planfact_import import import_planfact_transactions
+from tasks import start_sync_thread
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24).hex()  # This generates a secure random key
@@ -85,6 +86,7 @@ def index():
     date_to = request.args.get('date_to')
     account_id = request.args.get('account_id')
     counteragent_id = request.args.get('counteragent_id')
+    group_id = request.args.get('group_id')
     
     # Base query
     query = Transaction.query.join(Account).filter(Account.user_id == current_user.id)
@@ -100,6 +102,8 @@ def index():
         query = query.filter(Transaction.account_id == account_id)
     if counteragent_id:
         query = query.filter(Transaction.counteragent_id == counteragent_id)
+    if group_id:
+        query = query.filter(Transaction.group_id == group_id)
     
     # If no date filter applied, show current month
     if not date_from and not date_to:
@@ -115,16 +119,18 @@ def index():
     # Calculate total amount for filtered transactions
     total_amount = sum(t.amount for t in transactions)
     
-    # Get all accounts and counteragents for filters
+    # Get all accounts, counteragents and groups for filters
     all_accounts = Account.query.filter_by(user_id=current_user.id).order_by(Account.name).all()
     all_counteragents = Counteragent.query.filter_by(user_id=current_user.id).order_by(Counteragent.name).all()
+    all_groups = TransactionGroup.query.filter_by(user_id=current_user.id).order_by(TransactionGroup.name).all()
     
     return render_template('index.html',
                          transactions=transactions,
                          total_amount=float(total_amount),
                          current_month_name=month_name[date.today().month],
                          all_accounts=all_accounts,
-                         all_counteragents=all_counteragents)
+                         all_counteragents=all_counteragents,
+                         all_groups=all_groups)
 
 @app.route('/transactions/add', methods=['GET', 'POST'])
 @login_required
@@ -132,11 +138,14 @@ def add_transaction():
     income_accounts = Account.query.filter_by(user_id=current_user.id, account_type='income').all()
     expense_accounts = Account.query.filter_by(user_id=current_user.id, account_type='expense').all()
     counteragents = Counteragent.query.filter_by(user_id=current_user.id).all()
+    income_groups = TransactionGroup.query.filter_by(user_id=current_user.id, group_type='income').all()
+    expense_groups = TransactionGroup.query.filter_by(user_id=current_user.id, group_type='expense').all()
     
     if request.method == 'POST':
         account_id = request.form.get('account_id')
         amount = request.form.get('amount')
         counteragent_id = request.form.get('counteragent_id')
+        group_id = request.form.get('group_id')
         comment = request.form.get('comment')
         
         if not account_id or not amount:
@@ -148,6 +157,7 @@ def add_transaction():
             account_id=account_id,
             amount=amount,
             counteragent_id=counteragent_id if counteragent_id else None,
+            group_id=group_id if group_id else None,
             comment=comment
         )
         
@@ -159,7 +169,9 @@ def add_transaction():
     return render_template('add_transaction.html', 
                          income_accounts=income_accounts,
                          expense_accounts=expense_accounts,
-                         counteragents=counteragents)
+                         counteragents=counteragents,
+                         income_groups=income_groups,
+                         expense_groups=expense_groups)
 
 @app.route('/transactions/<int:transaction_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -172,11 +184,14 @@ def edit_transaction(transaction_id):
     income_accounts = Account.query.filter_by(user_id=current_user.id, account_type='income').all()
     expense_accounts = Account.query.filter_by(user_id=current_user.id, account_type='expense').all()
     counteragents = Counteragent.query.filter_by(user_id=current_user.id).all()
+    income_groups = TransactionGroup.query.filter_by(user_id=current_user.id, group_type='income').all()
+    expense_groups = TransactionGroup.query.filter_by(user_id=current_user.id, group_type='expense').all()
     
     if request.method == 'POST':
         account_id = request.form.get('account_id')
         amount = request.form.get('amount')
         counteragent_id = request.form.get('counteragent_id')
+        group_id = request.form.get('group_id')
         comment = request.form.get('comment')
         
         if not account_id or not amount:
@@ -187,6 +202,7 @@ def edit_transaction(transaction_id):
         transaction.account_id = account_id
         transaction.amount = amount
         transaction.counteragent_id = counteragent_id if counteragent_id else None
+        transaction.group_id = group_id if group_id else None
         transaction.comment = comment
         
         db.session.commit()
@@ -197,7 +213,9 @@ def edit_transaction(transaction_id):
                          transaction=transaction, 
                          income_accounts=income_accounts,
                          expense_accounts=expense_accounts,
-                         counteragents=counteragents)
+                         counteragents=counteragents,
+                         income_groups=income_groups,
+                         expense_groups=expense_groups)
 
 @app.route('/transaction/<int:transaction_id>/delete')
 @login_required
@@ -354,6 +372,16 @@ def import_planfact():
         return redirect(url_for("index"))
         
     try:
+        # Save API key
+        settings = ApiSettings.query.filter_by(user_id=current_user.id).first()
+        if not settings:
+            settings = ApiSettings(user_id=current_user.id, api_key=api_key)
+            db.session.add(settings)
+        else:
+            settings.api_key = api_key
+        db.session.commit()
+        
+        # Import transactions
         imported_count = import_planfact_transactions(api_key)
         flash(f"Successfully imported {imported_count} transactions from PlanFact", "success")
     except Exception as e:
@@ -361,7 +389,84 @@ def import_planfact():
         
     return redirect(url_for("index"))
 
+@app.route('/api_settings')
+@login_required
+def api_settings():
+    settings = ApiSettings.query.filter_by(user_id=current_user.id).first()
+    return render_template('api_settings.html', settings=settings)
+
+@app.route('/transaction_groups')
+@login_required
+def transaction_groups():
+    groups = TransactionGroup.query.filter_by(user_id=current_user.id).all()
+    return render_template('transaction_groups.html', groups=groups)
+
+@app.route('/transaction_groups/add', methods=['GET', 'POST'])
+@login_required
+def add_transaction_group():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        group_type = request.form.get('group_type')
+        
+        if not name or not group_type:
+            flash('Group name and type are required')
+            return redirect(url_for('add_transaction_group'))
+        
+        if group_type not in ['income', 'expense']:
+            flash('Invalid group type')
+            return redirect(url_for('add_transaction_group'))
+        
+        group = TransactionGroup(name=name, group_type=group_type, user_id=current_user.id)
+        db.session.add(group)
+        db.session.commit()
+        flash('Group added successfully')
+        return redirect(url_for('transaction_groups'))
+    
+    return render_template('add_transaction_group.html')
+
+@app.route('/transaction_groups/<int:group_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_transaction_group(group_id):
+    group = TransactionGroup.query.filter_by(id=group_id, user_id=current_user.id).first_or_404()
+    
+    if request.method == 'POST':
+        name = request.form.get('name')
+        group_type = request.form.get('group_type')
+        
+        if not name or not group_type:
+            flash('Group name and type are required')
+            return redirect(url_for('edit_transaction_group', group_id=group_id))
+        
+        if group_type not in ['income', 'expense']:
+            flash('Invalid group type')
+            return redirect(url_for('edit_transaction_group', group_id=group_id))
+        
+        group.name = name
+        group.group_type = group_type
+        db.session.commit()
+        flash('Group updated successfully')
+        return redirect(url_for('transaction_groups'))
+    
+    return render_template('edit_transaction_group.html', group=group)
+
+@app.route('/transaction_groups/<int:group_id>/delete')
+@login_required
+def delete_transaction_group(group_id):
+    group = TransactionGroup.query.filter_by(id=group_id, user_id=current_user.id).first_or_404()
+    
+    # Check if group has transactions
+    if group.transactions:
+        flash('Cannot delete group with transactions')
+        return redirect(url_for('transaction_groups'))
+    
+    db.session.delete(group)
+    db.session.commit()
+    flash('Group deleted successfully')
+    return redirect(url_for('transaction_groups'))
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        # Start background sync thread
+        sync_thread = start_sync_thread(app, db)
     app.run(debug=True, port=5001) 

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="content-container">
+    <div class="auth-container">
+        <h2>PlanFact API Settings</h2>
+        
+        <form action="{{ url_for('import_planfact') }}" method="post">
+            <div class="form-group">
+                <label for="api_key">API Key</label>
+                <input type="text" name="api_key" id="api_key" value="{{ settings.api_key if settings else '' }}" required>
+            </div>
+            
+            {% if settings %}
+            <div class="form-group">
+                <label>Last Sync</label>
+                <p>{{ settings.last_sync_at.strftime('%Y-%m-%d %H:%M:%S') if settings.last_sync_at else 'Never' }}</p>
+            </div>
+            {% endif %}
+            
+            <button type="submit">Save and Import</button>
+        </form>
+        
+        <div class="form-footer">
+            <p class="text-muted">Transactions are automatically synced every 2 minutes</p>
+            <a href="{{ url_for('index') }}">Back to Transactions</a>
+        </div>
+    </div>
+</div>
+{% endblock %} 

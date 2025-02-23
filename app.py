@@ -6,6 +6,7 @@ import os
 from datetime import datetime, date
 from calendar import month_name
 from sqlalchemy import extract, func
+from planfact_import import import_planfact_transactions
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24).hex()  # This generates a secure random key
@@ -324,6 +325,22 @@ def delete_counteragent(counteragent_id):
     db.session.commit()
     flash('Counteragent deleted successfully')
     return redirect(url_for('counteragents'))
+
+@app.route("/import_planfact", methods=["POST"])
+@login_required
+def import_planfact():
+    api_key = request.form.get("api_key")
+    if not api_key:
+        flash("API key is required", "error")
+        return redirect(url_for("index"))
+        
+    try:
+        imported_count = import_planfact_transactions(api_key)
+        flash(f"Successfully imported {imported_count} transactions from PlanFact", "success")
+    except Exception as e:
+        flash(f"Error importing transactions: {str(e)}", "error")
+        
+    return redirect(url_for("index"))
 
 if __name__ == '__main__':
     with app.app_context():

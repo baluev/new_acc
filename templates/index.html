@@ -4,7 +4,32 @@
 <div class="content-container">
     <div class="header-actions">
         <h2>Transactions - {{ current_month_name }}</h2>
-        <a href="{{ url_for('add_transaction') }}" class="action-button">Add Transaction</a>
+        <div>
+            <button type="button" class="action-button" onclick="document.getElementById('importModal').style.display='block'">
+                Import from PlanFact
+            </button>
+            <a href="{{ url_for('add_transaction') }}" class="action-button">Add Transaction</a>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="importModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4); z-index: 1000;">
+        <div style="background-color: white; margin: 15% auto; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0;">Import from PlanFact</h3>
+                <button onclick="document.getElementById('importModal').style.display='none'" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            <form action="{{ url_for('import_planfact') }}" method="post">
+                <div class="form-group">
+                    <label for="api_key">PlanFact API Key</label>
+                    <input type="text" class="form-control" id="api_key" name="api_key" required>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="action-button" onclick="document.getElementById('importModal').style.display='none'" style="background-color: #6B7280;">Cancel</button>
+                    <button type="submit" class="action-button">Import</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <div class="transactions-grid">

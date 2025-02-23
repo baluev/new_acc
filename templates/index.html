@@ -1,5 +1,11 @@
 {% extends "base.html" %}
 
+{% block head %}
+{# Add Choices.js library for enhanced dropdowns #}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@9.0.1/public/assets/styles/choices.min.css">
+<script src="https://cdn.jsdelivr.net/npm/choices.js@9.0.1/public/assets/scripts/choices.min.js"></script>
+{% endblock %}
+
 {% block content %}
 <div class="content-container">
     <div class="header-actions">
@@ -10,6 +16,50 @@
             </button>
             <a href="{{ url_for('add_transaction') }}" class="action-button">Add Transaction</a>
         </div>
+    </div>
+
+    <!-- Filter Form -->
+    <div class="filter-container">
+        <form method="GET" class="filter-form">
+            <div class="filter-group">
+                <label for="date_from">From Date</label>
+                <input type="date" id="date_from" name="date_from" value="{{ request.args.get('date_from', '') }}" class="filter-input">
+            </div>
+            
+            <div class="filter-group">
+                <label for="date_to">To Date</label>
+                <input type="date" id="date_to" name="date_to" value="{{ request.args.get('date_to', '') }}" class="filter-input">
+            </div>
+            
+            <div class="filter-group">
+                <label for="account_id">Account</label>
+                <select id="account_id" name="account_id" class="filter-select">
+                    <option value="">All Accounts</option>
+                    {% for account in all_accounts %}
+                    <option value="{{ account.id }}" {% if request.args.get('account_id')|int == account.id %}selected{% endif %}>
+                        {{ account.name }} ({{ account.account_type }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="counteragent_id">Counteragent</label>
+                <select id="counteragent_id" name="counteragent_id" class="filter-select">
+                    <option value="">All Counteragents</option>
+                    {% for counteragent in all_counteragents %}
+                    <option value="{{ counteragent.id }}" {% if request.args.get('counteragent_id')|int == counteragent.id %}selected{% endif %}>
+                        {{ counteragent.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-actions">
+                <button type="submit" class="action-button">Apply Filters</button>
+                <a href="{{ url_for('index') }}" class="action-button" style="background-color: #6B7280;">Reset</a>
+            </div>
+        </form>
     </div>
 
     <!-- Import Modal -->
@@ -80,5 +130,27 @@ function handleTransactionClick(event, transactionId) {
     }
     window.location.href = "{{ url_for('edit_transaction', transaction_id=0) }}".replace('0', transactionId);
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Choices.js for account dropdown
+    new Choices('#account_id', {
+        searchEnabled: true,
+        searchPlaceholderValue: 'Search for an account...',
+        placeholder: true,
+        placeholderValue: 'All Accounts',
+        itemSelectText: '',
+        shouldFocusInput: true
+    });
+
+    // Initialize Choices.js for counteragent dropdown
+    new Choices('#counteragent_id', {
+        searchEnabled: true,
+        searchPlaceholderValue: 'Search for a counteragent...',
+        placeholder: true,
+        placeholderValue: 'All Counteragents',
+        itemSelectText: '',
+        shouldFocusInput: true
+    });
+});
 </script>
 {% endblock %} 

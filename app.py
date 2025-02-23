@@ -3,7 +3,7 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from flask_migrate import Migrate
 from models import db, User, Account, Transaction, Counteragent
 import os
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from calendar import month_name
 from sqlalchemy import extract, func
 from planfact_import import import_planfact_transactions
@@ -80,32 +80,51 @@ def logout():
 @app.route('/')
 @login_required
 def index():
-    # Get current month's transactions
-    today = date.today()
-    transactions = Transaction.query\
-        .join(Account)\
-        .filter(
-            Account.user_id == current_user.id,
-            extract('year', Transaction.datetime) == today.year,
-            extract('month', Transaction.datetime) == today.month
-        )\
-        .order_by(Transaction.datetime.desc())\
-        .all()
+    # Get filter parameters
+    date_from = request.args.get('date_from')
+    date_to = request.args.get('date_to')
+    account_id = request.args.get('account_id')
+    counteragent_id = request.args.get('counteragent_id')
     
-    # Calculate total amount
-    total_amount = db.session.query(func.sum(Transaction.amount))\
-        .join(Account)\
-        .filter(
-            Account.user_id == current_user.id,
+    # Base query
+    query = Transaction.query.join(Account).filter(Account.user_id == current_user.id)
+    
+    # Apply filters
+    if date_from:
+        query = query.filter(Transaction.datetime >= datetime.strptime(date_from, '%Y-%m-%d'))
+    if date_to:
+        # Add one day to include the end date fully
+        end_date = datetime.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
+        query = query.filter(Transaction.datetime < end_date)
+    if account_id:
+        query = query.filter(Transaction.account_id == account_id)
+    if counteragent_id:
+        query = query.filter(Transaction.counteragent_id == counteragent_id)
+    
+    # If no date filter applied, show current month
+    if not date_from and not date_to:
+        today = date.today()
+        query = query.filter(
             extract('year', Transaction.datetime) == today.year,
             extract('month', Transaction.datetime) == today.month
-        )\
-        .scalar() or 0
+        )
+    
+    # Get transactions
+    transactions = query.order_by(Transaction.datetime.desc()).all()
+    
+    # Calculate total amount for filtered transactions
+    total_amount = sum(t.amount for t in transactions)
+    
+    # Get all accounts and counteragents for filters
+    all_accounts = Account.query.filter_by(user_id=current_user.id).order_by(Account.name).all()
+    all_counteragents = Counteragent.query.filter_by(user_id=current_user.id).order_by(Counteragent.name).all()
     
     return render_template('index.html',
                          transactions=transactions,
                          total_amount=float(total_amount),
-                         current_month_name=month_name[today.month])
+                         current_month_name=month_name[date.today().month],
+                         all_accounts=all_accounts,
+                         all_counteragents=all_counteragents)
 
 @app.route('/transactions/add', methods=['GET', 'POST'])
 @login_required

@@ -91,10 +91,14 @@ def import_planfact_transactions(api_key):
         create_date = parse_datetime(operation["createDate"])
         
         # Create transaction
+        amount = float(operation["value"])
+        if operation["operationType"] == "Outcome":
+            amount = -amount
+            
         transaction = Transaction(
             datetime=operation_date,
             account_id=account.id,
-            amount=float(operation["value"]),
+            amount=amount,
             counteragent_id=counteragent.id if counteragent else None,
             comment=operation.get("comment", ""),
             created_at=create_date

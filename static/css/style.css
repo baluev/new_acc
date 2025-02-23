@@ -453,10 +453,19 @@ form button:hover {
     padding: 4px 0;
     font-size: 0.875rem;
     color: var(--text-color);
+    position: relative;
+    z-index: 1;
 }
 
-.choices__input:focus {
-    outline: none;
+.choices__input--cloned {
+    font-size: 0.875rem;
+    padding: 0.5rem;
+    width: 100%;
+    background: white;
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 2;
 }
 
 .choices__list--dropdown {
@@ -465,10 +474,14 @@ form button:hover {
     margin-top: 4px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     background-color: white;
+    max-height: 300px;
+    overflow-y: auto;
 }
 
 .choices__list--dropdown .choices__list {
-    max-height: 300px;
+    max-height: none;
+    position: relative;
+    padding-top: 0;
 }
 
 .choices__list--dropdown .choices__item {
@@ -542,4 +555,60 @@ form button:hover {
     margin-right: 0.5rem;
     font-size: 1rem;
     font-weight: 600;
+}
+
+/* Filter Form */
+.filter-container {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--border-color);
+}
+
+.filter-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    align-items: end;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.filter-input,
+.filter-select {
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.875rem;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+}
+
+.filter-actions .action-button {
+    margin: 0;
+    padding: 0.5rem 1rem;
+}
+
+@media (max-width: 768px) {
+    .filter-form {
+        grid-template-columns: 1fr;
+    }
+    
+    .filter-actions {
+        flex-direction: column;
+    }
+    
+    .filter-actions .action-button {
+        width: 100%;
+    }
 } 

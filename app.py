@@ -87,6 +87,7 @@ def index():
     account_id = request.args.get('account_id')
     counteragent_id = request.args.get('counteragent_id')
     group_id = request.args.get('group_id')
+    page = request.args.get('page', 1, type=int)
     
     # Base query
     query = Transaction.query.join(Account).filter(Account.user_id == current_user.id)
@@ -105,19 +106,11 @@ def index():
     if group_id:
         query = query.filter(Transaction.group_id == group_id)
     
-    # If no date filter applied, show current month
-    if not date_from and not date_to:
-        today = date.today()
-        query = query.filter(
-            extract('year', Transaction.datetime) == today.year,
-            extract('month', Transaction.datetime) == today.month
-        )
+    # Order transactions and paginate
+    paginated_transactions = query.order_by(Transaction.datetime.desc()).paginate(page=page, per_page=50, error_out=False)
     
-    # Get transactions
-    transactions = query.order_by(Transaction.datetime.desc()).all()
-    
-    # Calculate total amount for filtered transactions
-    total_amount = sum(t.amount for t in transactions)
+    # Calculate total amount for all filtered transactions (not just current page)
+    total_amount = db.session.query(func.sum(Transaction.amount)).filter(query.whereclause).scalar() or 0
     
     # Get all accounts, counteragents and groups for filters
     all_accounts = Account.query.filter_by(user_id=current_user.id).order_by(Account.name).all()
@@ -125,9 +118,9 @@ def index():
     all_groups = TransactionGroup.query.filter_by(user_id=current_user.id).order_by(TransactionGroup.name).all()
     
     return render_template('index.html',
-                         transactions=transactions,
+                         transactions=paginated_transactions.items,
+                         pagination=paginated_transactions,
                          total_amount=float(total_amount),
-                         current_month_name=month_name[date.today().month],
                          all_accounts=all_accounts,
                          all_counteragents=all_counteragents,
                          all_groups=all_groups)

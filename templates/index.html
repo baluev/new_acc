@@ -9,7 +9,7 @@
 {% block content %}
 <div class="content-container">
     <div class="header-actions">
-        <h2>Transactions - {{ current_month_name }}</h2>
+        <h2>Transactions</h2>
         <div>
             <button type="button" class="action-button" onclick="document.getElementById('importModal').style.display='block'">
                 Import from PlanFact
@@ -89,8 +89,9 @@
                 <tr>
                     <th>Date</th>
                     <th>Account</th>
-                    <th>Amount</th>
+                    <th>Group</th>
                     <th>Counteragent</th>
+                    <th>Amount</th>
                     <th>Comment</th>
                 </tr>
             </thead>
@@ -99,28 +100,73 @@
                 <tr class="clickable {{ 'income' if transaction.amount >= 0 else 'expense' }}" onclick="handleTransactionClick(event, {{ transaction.id }})">
                     <td>{{ transaction.datetime.strftime('%Y-%m-%d %H:%M') }}</td>
                     <td>{{ transaction.account.name }}</td>
-                    <td class="amount">{{ "%.2f"|format(transaction.amount) }}</td>
+                    <td>{{ transaction.group.name if transaction.group else '-' }}</td>
                     <td>{{ transaction.counteragent or '-' }}</td>
+                    <td class="amount">{{ "%.2f"|format(transaction.amount) }}</td>
                     <td>{{ transaction.comment or '-' }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="2"><strong>Total:</strong></td>
+                    <td colspan="4"><strong>Total:</strong></td>
                     <td class="amount"><strong>{{ "%.2f"|format(total_amount) }}</strong></td>
-                    <td colspan="2"></td>
+                    <td></td>
                 </tr>
             </tfoot>
         </table>
+        
+        {% if pagination.pages > 1 %}
+        <div class="pagination">
+            {% if pagination.has_prev %}
+            <a href="{{ url_for('index', page=pagination.prev_num, date_from=request.args.get('date_from'), date_to=request.args.get('date_to'), account_id=request.args.get('account_id'), counteragent_id=request.args.get('counteragent_id')) }}" class="pagination-link">&laquo; Previous</a>
+            {% endif %}
+            
+            <span class="pagination-info">
+                Page {{ pagination.page }} of {{ pagination.pages }}
+            </span>
+            
+            {% if pagination.has_next %}
+            <a href="{{ url_for('index', page=pagination.next_num, date_from=request.args.get('date_from'), date_to=request.args.get('date_to'), account_id=request.args.get('account_id'), counteragent_id=request.args.get('counteragent_id')) }}" class="pagination-link">Next &raquo;</a>
+            {% endif %}
+        </div>
+        {% endif %}
         {% else %}
         <div class="empty-state">
-            <p>No transactions found for this month.</p>
+            <p>No transactions found.</p>
             <a href="{{ url_for('add_transaction') }}" class="action-button">Add Your First Transaction</a>
         </div>
         {% endif %}
     </div>
 </div>
+
+<style>
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+    gap: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.pagination-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.pagination-link:hover {
+    background-color: rgba(230, 126, 34, 0.1);
+}
+
+.pagination-info {
+    color: var(--text-color);
+    font-size: 12px;
+}
+</style>
 
 <script>
 function handleTransactionClick(event, transactionId) {
